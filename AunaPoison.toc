@@ -1,0 +1,8 @@
+## Interface: 11200
+## Title: AunaPoison
+## Notes: Shows poison stacks for weapons
+## Author: DeinName
+## Version: 1.0
+## SavedVariables: AunaPoisonDB
+
+AunaPoison.lua
