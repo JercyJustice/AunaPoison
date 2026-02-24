@@ -7,16 +7,21 @@ AunaPoisonDB = AunaPoisonDB or {
     selectedOffPoison = nil,
     warnTime = 2,
     warnStacks = 5,
-    showWarnings = true
+    showWarnings = true,
+    pulseWarnings = false,
+    pulseSpeed = 1.0
 }
+if AunaPoisonDB.pulseWarnings == nil then AunaPoisonDB.pulseWarnings = false end
+if AunaPoisonDB.pulseSpeed == nil then AunaPoisonDB.pulseSpeed = 1.0 end
 
 local selectedMainPoison = nil
 local selectedOffPoison = nil
+local forceWarning = false
 
 -- Main frame
 local AunaPoison = CreateFrame("Frame", "AunaPoisonFrame", UIParent)
-AunaPoison:SetWidth(170)
-AunaPoison:SetHeight(50)
+AunaPoison:SetWidth(140)
+AunaPoison:SetHeight(45)
 AunaPoison:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -20, -100)
 
 AunaPoison:SetBackdrop({
@@ -32,15 +37,15 @@ AunaPoison:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
 
 -- Title
 local title = AunaPoison:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-title:SetPoint("TOP", AunaPoison, "TOP", 0, -7)
+title:SetPoint("TOP", AunaPoison, "TOP", 0, -5)
 title:SetText("AunaPoison")
 title:SetTextColor(1, 1, 0, 1)
 
 -- Settings Button
 local settingsBtn = CreateFrame("Button", "AunaPoisonSettingsBtn", AunaPoison)
-settingsBtn:SetWidth(22)
-settingsBtn:SetHeight(22)
-settingsBtn:SetPoint("CENTER", AunaPoison, "CENTER", 0, -8)
+settingsBtn:SetWidth(18)
+settingsBtn:SetHeight(18)
+settingsBtn:SetPoint("CENTER", AunaPoison, "CENTER", 0, -4)
 
 settingsBtn:SetBackdrop({
     bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -123,7 +128,7 @@ local function CreateSettingsFrame()
     
     settingsFrame = CreateFrame("Frame", "AunaPoisonSettings", UIParent)
     settingsFrame:SetWidth(250)
-    settingsFrame:SetHeight(200)
+    settingsFrame:SetHeight(285)
     settingsFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     
     settingsFrame:SetBackdrop({
@@ -192,25 +197,99 @@ local function CreateSettingsFrame()
     stackLabel:SetText("Warn when stacks below:")
     stackLabel:SetTextColor(1, 1, 1, 1)
     
-    local stackEditBox = CreateFrame("EditBox", nil, settingsFrame, "InputBoxTemplate")
-    stackEditBox:SetWidth(40)
-    stackEditBox:SetHeight(20)
+    local stackEditBox = CreateFrame("EditBox", "AunaPoisonStackEdit", settingsFrame)
+    stackEditBox:SetWidth(50)
+    stackEditBox:SetHeight(22)
     stackEditBox:SetPoint("TOPLEFT", stackLabel, "BOTTOMLEFT", 5, -5)
+    stackEditBox:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 }
+    })
+    stackEditBox:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+    stackEditBox:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+    stackEditBox:SetFontObject("GameFontNormalSmall")
+    stackEditBox:SetTextInsets(5, 5, 0, 0)
+    stackEditBox:SetMaxLetters(4)
+    stackEditBox:SetNumeric(true)
     stackEditBox:SetText(tostring(AunaPoisonDB.warnStacks))
     stackEditBox:SetAutoFocus(false)
-    
+    stackEditBox:EnableMouse(true)
+    stackEditBox:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+
     local timeLabel = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     timeLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 15, -110)
     timeLabel:SetText("Warn when time below (min):")
     timeLabel:SetTextColor(1, 1, 1, 1)
-    
-    local timeEditBox = CreateFrame("EditBox", nil, settingsFrame, "InputBoxTemplate")
-    timeEditBox:SetWidth(40)
-    timeEditBox:SetHeight(20)
+
+    local timeEditBox = CreateFrame("EditBox", "AunaPoisonTimeEdit", settingsFrame)
+    timeEditBox:SetWidth(50)
+    timeEditBox:SetHeight(22)
     timeEditBox:SetPoint("TOPLEFT", timeLabel, "BOTTOMLEFT", 5, -5)
+    timeEditBox:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 }
+    })
+    timeEditBox:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+    timeEditBox:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+    timeEditBox:SetFontObject("GameFontNormalSmall")
+    timeEditBox:SetTextInsets(5, 5, 0, 0)
+    timeEditBox:SetMaxLetters(4)
+    timeEditBox:SetNumeric(true)
     timeEditBox:SetText(tostring(AunaPoisonDB.warnTime))
     timeEditBox:SetAutoFocus(false)
-    
+    timeEditBox:EnableMouse(true)
+    timeEditBox:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+
+    local pulseCheckbox = CreateFrame("CheckButton", nil, settingsFrame)
+    pulseCheckbox:SetWidth(16)
+    pulseCheckbox:SetHeight(16)
+    pulseCheckbox:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 15, -162)
+    pulseCheckbox:SetNormalTexture("Interface\\Buttons\\UI-CheckBox-Up")
+    pulseCheckbox:SetPushedTexture("Interface\\Buttons\\UI-CheckBox-Down")
+    pulseCheckbox:SetCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check")
+    pulseCheckbox:SetChecked(AunaPoisonDB.pulseWarnings)
+
+    local pulseLabel = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    pulseLabel:SetPoint("LEFT", pulseCheckbox, "RIGHT", 5, 0)
+    pulseLabel:SetText("Pulse warning indicators")
+    pulseLabel:SetTextColor(1, 1, 1, 1)
+
+    local speedLabel = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    speedLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 15, -185)
+    speedLabel:SetText("Pulse Speed:")
+    speedLabel:SetTextColor(1, 1, 1, 1)
+
+    local slowText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    slowText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 15, -201)
+    slowText:SetText("Slow")
+    slowText:SetTextColor(0.6, 0.6, 0.6, 1)
+
+    local fastText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    fastText:SetPoint("TOPRIGHT", settingsFrame, "TOPRIGHT", -15, -201)
+    fastText:SetText("Fast")
+    fastText:SetTextColor(0.6, 0.6, 0.6, 1)
+
+    local pulseSlider = CreateFrame("Slider", nil, settingsFrame)
+    pulseSlider:SetWidth(170)
+    pulseSlider:SetHeight(16)
+    pulseSlider:SetPoint("TOP", settingsFrame, "TOP", 0, -210)
+    pulseSlider:SetOrientation("HORIZONTAL")
+    pulseSlider:SetMinMaxValues(0.3, 4.0)
+    pulseSlider:SetValueStep(0.1)
+    pulseSlider:SetValue(AunaPoisonDB.pulseSpeed or 1.0)
+    pulseSlider:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+    local sliderBg = pulseSlider:CreateTexture(nil, "BACKGROUND")
+    sliderBg:SetTexture("Interface\\Buttons\\UI-SliderBar-Background")
+    sliderBg:SetAllPoints(pulseSlider)
+    sliderBg:SetTexCoord(0, 1, 0, 0.45)
+    pulseSlider:SetScript("OnValueChanged", function()
+        AunaPoisonDB.pulseSpeed = this:GetValue()
+    end)
+
     local saveBtn = CreateFrame("Button", nil, settingsFrame)
     saveBtn:SetWidth(80)
     saveBtn:SetHeight(25)
@@ -241,6 +320,8 @@ local function CreateSettingsFrame()
         AunaPoisonDB.showWarnings = warnCheckbox:GetChecked()
         AunaPoisonDB.warnStacks = tonumber(stackEditBox:GetText()) or 5
         AunaPoisonDB.warnTime = tonumber(timeEditBox:GetText()) or 2
+        AunaPoisonDB.pulseWarnings = pulseCheckbox:GetChecked()
+        AunaPoisonDB.pulseSpeed = pulseSlider:GetValue()
         SaveBindings(2)
         DEFAULT_CHAT_FRAME:AddMessage("AunaPoison settings saved!")
         settingsFrame:Hide()
@@ -248,13 +329,16 @@ local function CreateSettingsFrame()
     end)
     
     settingsFrame:SetMovable(true)
-    settingsFrame:EnableMouse(true)
-    settingsFrame:RegisterForDrag("LeftButton")
-    settingsFrame:SetScript("OnDragStart", function()
-        this:StartMoving()
+
+    local dragZone = CreateFrame("Frame", nil, settingsFrame)
+    dragZone:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 0, 0)
+    dragZone:SetPoint("BOTTOMRIGHT", settingsFrame, "TOPRIGHT", -35, -22)
+    dragZone:EnableMouse(true)
+    dragZone:SetScript("OnMouseDown", function()
+        if arg1 == "LeftButton" then settingsFrame:StartMoving() end
     end)
-    settingsFrame:SetScript("OnDragStop", function()
-        this:StopMovingOrSizing()
+    dragZone:SetScript("OnMouseUp", function()
+        settingsFrame:StopMovingOrSizing()
     end)
     
     settingsFrame:Show()
@@ -266,9 +350,9 @@ end)
 
 -- Icon for main hand
 local mainIcon = CreateFrame("Frame", "MainPoisonIcon", AunaPoison)
-mainIcon:SetWidth(20)
-mainIcon:SetHeight(20)
-mainIcon:SetPoint("RIGHT", settingsBtn, "LEFT", -10, 0)
+mainIcon:SetWidth(18)
+mainIcon:SetHeight(18)
+mainIcon:SetPoint("RIGHT", settingsBtn, "LEFT", -6, 0)
 
 local mainIconTexture = mainIcon:CreateTexture(nil, "ARTWORK")
 mainIconTexture:SetAllPoints(mainIcon)
@@ -280,9 +364,9 @@ mainButton:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
 
 -- Icon for off hand
 local offIcon = CreateFrame("Frame", "OffPoisonIcon", AunaPoison)
-offIcon:SetWidth(20)
-offIcon:SetHeight(20)
-offIcon:SetPoint("LEFT", settingsBtn, "RIGHT", 10, 0)
+offIcon:SetWidth(18)
+offIcon:SetHeight(18)
+offIcon:SetPoint("LEFT", settingsBtn, "RIGHT", 6, 0)
 
 local offIconTexture = offIcon:CreateTexture(nil, "ARTWORK")
 offIconTexture:SetAllPoints(offIcon)
@@ -294,14 +378,14 @@ offButton:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
 
 -- Text for main hand
 local mainHandText = AunaPoison:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-mainHandText:SetPoint("RIGHT", mainIcon, "LEFT", -5, 0)
+mainHandText:SetPoint("RIGHT", mainIcon, "LEFT", -4, 0)
 mainHandText:SetText("0")
 mainHandText:SetTextColor(1, 1, 1, 1)
 mainHandText:SetJustifyH("RIGHT")
 
 -- Text for off hand
 local offHandText = AunaPoison:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-offHandText:SetPoint("LEFT", offIcon, "RIGHT", 5, 0)
+offHandText:SetPoint("LEFT", offIcon, "RIGHT", 4, 0)
 offHandText:SetText("0")
 offHandText:SetTextColor(1, 1, 1, 1)
 offHandText:SetJustifyH("LEFT")
@@ -506,11 +590,10 @@ local function CreatePoisonSelector(isMainHand)
     
     poisonSelector:SetMovable(true)
     poisonSelector:EnableMouse(true)
-    poisonSelector:RegisterForDrag("LeftButton")
-    poisonSelector:SetScript("OnDragStart", function()
-        this:StartMoving()
+    poisonSelector:SetScript("OnMouseDown", function()
+        if arg1 == "LeftButton" then this:StartMoving() end
     end)
-    poisonSelector:SetScript("OnDragStop", function()
+    poisonSelector:SetScript("OnMouseUp", function()
         this:StopMovingOrSizing()
     end)
     
@@ -563,11 +646,10 @@ end)
 -- Make window draggable
 AunaPoison:SetMovable(true)
 AunaPoison:EnableMouse(true)
-AunaPoison:RegisterForDrag("LeftButton")
-AunaPoison:SetScript("OnDragStart", function()
-    this:StartMoving()
+AunaPoison:SetScript("OnMouseDown", function()
+    if arg1 == "LeftButton" then this:StartMoving() end
 end)
-AunaPoison:SetScript("OnDragStop", function()
+AunaPoison:SetScript("OnMouseUp", function()
     this:StopMovingOrSizing()
 end)
 
@@ -648,7 +730,12 @@ local function CheckPoisonCharges()
         mainWarningIcon:Hide()
         offWarningIcon:Hide()
     end
-    
+
+    if forceWarning then
+        mainWarningIcon:Show()
+        offWarningIcon:Show()
+    end
+
     -- Update text
     if mainHandCharges > 0 then
         mainHandText:SetText(mainHandCharges)
@@ -686,11 +773,25 @@ end
 
 -- Update timer
 local updateTimer = 0
+local pulseTimer = 0
 AunaPoison:SetScript("OnUpdate", function()
-    updateTimer = updateTimer + arg1
+    local elapsed = arg1
+    updateTimer = updateTimer + elapsed
     if updateTimer >= 0.5 then
         CheckPoisonCharges()
         updateTimer = 0
+    end
+    if AunaPoisonDB.pulseWarnings then
+        pulseTimer = pulseTimer + elapsed * (AunaPoisonDB.pulseSpeed or 1.0)
+        local alpha = 0.2 + 0.7 * math.abs(math.sin(pulseTimer * math.pi))
+        if mainWarningIcon:IsVisible() then
+            mainWarningIcon:SetBackdropColor(1, 0, 0, alpha)
+        end
+        if offWarningIcon:IsVisible() then
+            offWarningIcon:SetBackdropColor(1, 0, 0, alpha)
+        end
+    else
+        pulseTimer = 0
     end
 end)
 
@@ -747,20 +848,17 @@ SlashCmdList["AUNAPOISON"] = function(msg)
             local shouldWarnStacks = offHandCharges <= AunaPoisonDB.warnStacks
             DEFAULT_CHAT_FRAME:AddMessage("Off Hand - Time left: " .. string.format("%.1f", timeLeft) .. "min, Warn Time: " .. tostring(shouldWarnTime) .. ", Warn Stacks: " .. tostring(shouldWarnStacks))
         end
-    elseif msg == "testwarning" then
-        DEFAULT_CHAT_FRAME:AddMessage("Forcing warning indicators to show...")
-        mainWarningIcon:Show()
-        offWarningIcon:Show()
-    elseif msg == "hidewarning" then
-        DEFAULT_CHAT_FRAME:AddMessage("Hiding warning indicators...")
-        mainWarningIcon:Hide()
-        offWarningIcon:Hide()
+    elseif msg == "testwarning on" then
+        forceWarning = true
+        DEFAULT_CHAT_FRAME:AddMessage("Warning indicators forced ON")
+    elseif msg == "testwarning off" then
+        forceWarning = false
+        DEFAULT_CHAT_FRAME:AddMessage("Warning indicators forced OFF")
     else
         DEFAULT_CHAT_FRAME:AddMessage("AunaPoison Commands:")
         DEFAULT_CHAT_FRAME:AddMessage("/ap show/hide - Show/hide addon")
-        DEFAULT_CHAT_FRAME:AddMessage("/ap debug - Debug info") 
-        DEFAULT_CHAT_FRAME:AddMessage("/ap testwarning - Force show warnings")
-        DEFAULT_CHAT_FRAME:AddMessage("/ap hidewarning - Hide warnings")
+        DEFAULT_CHAT_FRAME:AddMessage("/ap debug - Debug info")
+        DEFAULT_CHAT_FRAME:AddMessage("/ap testwarning on/off - Force warnings on/off")
     end
 end
 
